@@ -1,0 +1,190 @@
+﻿<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Digital Eye Fatigue Analyzer</title>
+    <link rel='stylesheet' href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class='container'>
+        <header>
+            <h1> Digital Eye Fatigue Analyzer</h1>
+            <p class='subtitle'>Analyze your eye fatigue using MediaPipe and AI</p>
+        </header>
+
+        <main class='upload-section'>
+            <div class='upload-box'>
+                <h2>Upload Eye Image</h2>
+                <p class='instruction'>Upload a clear image of your eye for analysis</p>
+                
+                <form id='uploadForm' enctype='multipart/form-data'>
+                    <div class='file-input-wrapper'>
+                        <label for='imageFile' class='file-label'>
+                            <div class='file-input-icon'></div>
+                            <span>Click to select image or drag and drop</span>
+                        </label>
+                        <input type='file' id='imageFile' name='file' accept='image/*' required>
+                    </div>
+                    
+                    <div id='preview-container' class='preview-hidden'>
+                        <img id='imagePreview' alt='Preview'>
+                        <button type='button' class='remove-btn' onclick='removeImage()'>Remove</button>
+                    </div>
+                    
+                    <div class='parameters-section'>
+                        <div class='parameter-group'>
+                            <label for='screenTime'>Screen Time (hours):</label>
+                            <input type='number' id='screenTime' name='screen_time' value='8' min='0' max='24' step='0.5' class='parameter-input'>
+                        </div>
+                        <div class='parameter-group'>
+                            <label for='eyeCondition'>Eye Condition:</label>
+                            <select id='eyeCondition' name='condition' class='parameter-input'>
+                                <option value='Normal'>Normal</option>
+                                <option value='Diabetic Retinopathy'>Diabetic Retinopathy</option>
+                                <option value='Glaucoma'>Glaucoma</option>
+                                <option value='Cataract'>Cataract</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button type='submit' class='analyze-btn' id='analyzeBtn'>Analyze Image</button>
+                </form>
+            </div>
+
+            <div id='loadingSpinner' class='loading-hidden'>
+                <div class='spinner'></div>
+                <p>Analyzing image...</p>
+            </div>
+
+            <div id='errorBox' class='error-hidden'>
+                <span class='close-btn' onclick='clearError()'>&times;</span>
+                <p id='errorMessage'></p>
+            </div>
+        </main>
+
+        <footer>
+            <p>Final-Year Engineering Project | Eye Fatigue Analysis System</p>
+        </footer>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('imageFile');
+        const uploadForm = document.getElementById('uploadForm');
+        const previewContainer = document.getElementById('preview-container');
+        const imagePreview = document.getElementById('imagePreview');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const errorBox = document.getElementById('errorBox');
+        const errorMessage = document.getElementById('errorMessage');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+
+        // Drag and drop
+        const fileLabel = document.querySelector('.file-label');
+        
+        fileLabel.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileLabel.style.backgroundColor = '#e8f4f8';
+        });
+
+        fileLabel.addEventListener('dragleave', () => {
+            fileLabel.style.backgroundColor = '';
+        });
+
+        fileLabel.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileLabel.style.backgroundColor = '';
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileSelect();
+            }
+        });
+
+        fileInput.addEventListener('change', handleFileSelect);
+
+        function handleFileSelect() {
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                
+                if (!file.type.startsWith('image/')) {
+                    showError('Please select a valid image file');
+                    fileInput.value = '';
+                    return;
+                }
+
+                if (file.size > 16 * 1024 * 1024) {
+                    showError('File size exceeds 16MB limit');
+                    fileInput.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    previewContainer.classList.remove('preview-hidden');
+                };
+                reader.readAsDataURL(file);
+                clearError();
+            }
+        }
+
+        function removeImage() {
+            fileInput.value = '';
+            previewContainer.classList.add('preview-hidden');
+            imagePreview.src = '';
+        }
+
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (fileInput.files.length === 0) {
+                showError('Please select an image');
+                return;
+            }
+
+            clearError();
+            loadingSpinner.classList.remove('loading-hidden');
+            analyzeBtn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('screen_time', document.getElementById('screenTime').value || '8');
+            formData.append('condition', document.getElementById('eyeCondition').value || 'Normal');
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    sessionStorage.setItem('results', JSON.stringify({
+                        redness: data.redness,
+                        dryness: data.dryness,
+                        fatigue: data.fatigue
+                    }));
+                    window.location.href = '/results';
+                } else {
+                    showError(data.error || 'Analysis failed. Please try again.');
+                }
+            } catch (error) {
+                showError('Error connecting to server: ' + error.message);
+            } finally {
+                loadingSpinner.classList.add('loading-hidden');
+                analyzeBtn.disabled = false;
+            }
+        });
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorBox.classList.remove('error-hidden');
+        }
+
+        function clearError() {
+            errorBox.classList.add('error-hidden');
+            errorMessage.textContent = '';
+        }
+    </script>
+</body>
+</html>

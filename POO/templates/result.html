@@ -1,0 +1,137 @@
+﻿<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Analysis Results - Eye Fatigue Analyzer</title>
+    <link rel='stylesheet' href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class='container'>
+        <header>
+            <h1> Analysis Results</h1>
+            <p class='subtitle'>Your eye fatigue assessment</p>
+        </header>
+
+        <main class='results-section'>
+            <div class='results-box'>
+                <div class='score-card redness-card'>
+                    <h3>Redness</h3>
+                    <div class='score-display' id='rednessScore'>-</div>
+                    <div class='score-bar'>
+                        <div class='score-fill' id='rednessBar'></div>
+                    </div>
+                    <p class='score-label' id='rednessLabel'></p>
+                </div>
+
+                <div class='score-card dryness-card'>
+                    <h3>Dryness</h3>
+                    <div class='score-display' id='drynessScore'>-</div>
+                    <div class='score-bar'>
+                        <div class='score-fill' id='drynessBar'></div>
+                    </div>
+                    <p class='score-label' id='drynessLabel'></p>
+                </div>
+
+                <div class='score-card fatigue-card'>
+                    <h3>Fatigue</h3>
+                    <div class='score-display' id='fatigueScore'>-</div>
+                    <div class='score-bar'>
+                        <div class='score-fill' id='fatigueBar'></div>
+                    </div>
+                    <p class='score-label' id='fatigueLabel'></p>
+                </div>
+            </div>
+
+            <div class='recommendations-box'>
+                <h3>Recommendations</h3>
+                <ul class='recommendations-list'>
+                    <li> Blink more frequently throughout the day</li>
+                    <li>20-20-20 Rule: Every 20 minutes, look at something 20 feet away for 20 seconds</li>
+                    <li> Maintain proper lighting when using screens</li>
+                    <li> Include vitamin A-rich foods in your diet</li>
+                    <li> Ensure 7-9 hours of sleep daily</li>
+                </ul>
+            </div>
+
+            <div class='action-buttons'>
+                <button onclick='location.href=""/"" 'class='btn-new-analysis'>Analyze Another Image</button>
+                <button onclick='downloadResults()' class='btn-download'>Download Results</button>
+            </div>
+        </main>
+
+        <footer>
+            <p>Final-Year Engineering Project | Eye Fatigue Analysis System</p>
+        </footer>
+    </div>
+
+    <script>
+        function getColorClass(score) {
+            if (score <= 3) return 'score-green';
+            if (score <= 6) return 'score-orange';
+            return 'score-red';
+        }
+
+        function getColorLabel(score) {
+            if (score <= 3) return ' Normal';
+            if (score <= 6) return ' Moderate';
+            return ' High';
+        }
+
+        function displayResults() {
+            const results = JSON.parse(sessionStorage.getItem('results') || '{}');
+            
+            if (!results.redness) {
+                document.querySelector('.results-box').innerHTML = '<p>Error loading results. Please try again.</p>';
+                return;
+            }
+
+            const redness = Math.round(results.redness);
+            const dryness = Math.round(results.dryness);
+            const fatigue = Math.round(results.fatigue);
+
+            // Update redness
+            document.getElementById('rednessScore').textContent = redness + '/10';
+            document.getElementById('rednessScore').className = 'score-display ' + getColorClass(redness);
+            document.getElementById('rednessBar').style.width = (redness * 10) + '%';
+            document.getElementById('rednessBar').className = 'score-fill ' + getColorClass(redness);
+            document.getElementById('rednessLabel').textContent = getColorLabel(redness);
+
+            // Update dryness
+            document.getElementById('drynessScore').textContent = dryness + '/10';
+            document.getElementById('drynessScore').className = 'score-display ' + getColorClass(dryness);
+            document.getElementById('drynessBar').style.width = (dryness * 10) + '%';
+            document.getElementById('drynessBar').className = 'score-fill ' + getColorClass(dryness);
+            document.getElementById('drynessLabel').textContent = getColorLabel(dryness);
+
+            // Update fatigue
+            document.getElementById('fatigueScore').textContent = fatigue + '/10';
+            document.getElementById('fatigueScore').className = 'score-display ' + getColorClass(fatigue);
+            document.getElementById('fatigueBar').style.width = (fatigue * 10) + '%';
+            document.getElementById('fatigueBar').className = 'score-fill ' + getColorClass(fatigue);
+            document.getElementById('fatigueLabel').textContent = getColorLabel(fatigue);
+
+            sessionStorage.removeItem('results');
+        }
+
+        function downloadResults() {
+            const redness = document.getElementById('rednessScore').textContent;
+            const dryness = document.getElementById('drynessScore').textContent;
+            const fatigue = document.getElementById('fatigueScore').textContent;
+            const timestamp = new Date().toLocaleString();
+
+            const content = `Eye Fatigue Analysis Report\nGenerated: ${timestamp}\n\nRedness: ${redness}\nDryness: ${dryness}\nFatigue: ${fatigue}`;
+            
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'eye_fatigue_report_' + new Date().getTime() + '.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        displayResults();
+    </script>
+</body>
+</html>
